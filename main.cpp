@@ -1,96 +1,84 @@
 #include <iostream>
 #include <vector>
-#include <math.h>
 #include <random>
-#include <algorithm>
+#include <time.h>
 
 double func(double x, double y){
     return exp(-x*x-y*y);
 }
 
-struct Coords{
+struct individ{
     double x,y;
-    double fit;
+    double f;
 };
 
-std::vector<Coords> population;
-
-double mid_value(const std::vector<Coords>& v){
-    double res = 0.0;
-    for (const auto& el : v){
-        res += el.fit;
+double medium(std::vector<individ>& pop){
+    double mid = 0;
+    for (auto& i : pop){
+        mid += i.f;
     }
-    return res / 4;
+    return mid / 4;
 }
 
-bool CompareCoords(const Coords& c1, const Coords& c2){
-    return c1.fit > c2.fit;
-};
+bool cmp(const individ& in, const individ& ind){
+    return in.f > ind.f;
+}
 
-void print_results(const std::vector<Coords>& v, size_t it){
-    std::cout << "N: " << it << " Average: " << mid_value(v) << " Max: " << v[0].fit << std::endl;
-    for (const auto& el : v){
-        std::cout << "x: " << el.x << " y: " << el.y << " fit: " << el.fit << std::endl;
+void print(std::vector<individ>& pop, int n){
+    std::cout << "N = " <<n <<" Medium result = " <<medium(pop) <<" Maximum result = " <<pop[0].f <<std::endl;
+    for (const auto& i : pop){
+        std::cout <<"X = " <<i.x <<" Y = " <<i.y <<" F(x,y) = " <<i.f <<std::endl;
     }
 }
 
-int main(int argc, const char * argv[]) {
-    population.resize(4);
-    std::random_device rd;
-    std::mt19937 mersenne(rd());
-    std::uniform_real_distribution<double> dis(-1, 1);
-    std::uniform_real_distribution<double> dis_mut(-5, 5);
-    std::uniform_real_distribution<double> prob(0, 1);
+int main() {
+    std::mt19937 mersenne(time(0));
+    std::vector<individ> popul(4);
+    std::uniform_real_distribution<double> interval(-2, 2);
+    std::uniform_real_distribution<double> mut(0, 1);
+    double mutation = 0.4;
+    for (int i = 0; i < 4; i++){
+        individ new_ind;
+        new_ind.x = interval(mersenne);
+        new_ind.y = interval(mersenne);
+        new_ind.f = func(new_ind.x, new_ind.y);
+        popul[i] = new_ind;
+    }
     int n = 100;
-    double p_mut = 0.05;
-    
-    for (auto i = 0; i < population.size(); i++){
-        Coords coord;
-        coord.x = dis(mersenne);
-        coord.y = dis(mersenne);
-        coord.fit = func(coord.x, coord.y);
-        population[i] = coord;
-    }
-    
-    std::sort(population.begin(), population.end(), CompareCoords);
-    print_results(population, 0);
-    for (auto i = 1; i <= n; i++){
-        for (auto j = 0; j < population.size(); j++){
-            auto p = prob(mersenne);
-            if (p < p_mut){
-                population[j].x = fmod(population[j].x * dis_mut(mersenne), 1);
-                population[j].y = fmod(population[j].y * dis_mut(mersenne), 1);
-                population[j].fit = func(population[j].x, population[j].y);
+    std::sort(popul.begin(), popul.end(), cmp);
+    print(popul, 0);
+    for (int i = 1; i <= n; i++){
+        for (auto j = 0; j < popul.size(); j++) {
+            auto ch = mut(mersenne);
+            if (ch < mutation) {
+                popul[j].x = (popul[j].x + interval(mersenne)) / 2;
+                popul[j].y = (popul[j].y + interval(mersenne)) / 2;
+                popul[j].f = func(popul[j].x, popul[j].y);
             }
         }
-        std::sort(population.begin(), population.end(), CompareCoords);
-        std::vector<Coords> new_pop;
-        new_pop.resize(4);
-        size_t temp;
-        if (population[0].fit != population[1].fit){
-            temp = 1;
+        std::sort(popul.begin(), popul.end(), cmp);
+        std::vector<individ> new_popul(4);
+        int l;
+        if (popul[0].f != popul[1].f){
+             l = 1;
         } else {
-            temp = 2;
+             l = 2;
         }
-        new_pop[0].x = population[0].x;
-        new_pop[0].y = population[temp].y;
-        new_pop[0].fit = func(new_pop[0].x, new_pop[0].y);
-    
-        new_pop[1].x = population[temp].x;
-        new_pop[1].y = population[0].y;
-        new_pop[1].fit = func(new_pop[1].x, new_pop[1].y);
-        
-        new_pop[2].x = population[0].x;
-        new_pop[2].y = population[temp + 1].y;
-        new_pop[2].fit = func(new_pop[2].x, new_pop[2].y);
-        
-        new_pop[3].x = population[temp + 1].x;
-        new_pop[3].y = population[0].y;
-        new_pop[3].fit = func(new_pop[3].x, new_pop[3].y);
-        
-        std::sort(new_pop.begin(), new_pop.end(), CompareCoords);
-        population = new_pop;
-        print_results(population, i);
+        new_popul[0].x = popul[0].x;
+        new_popul[0].y = popul[l].y;
+        new_popul[0].f = func(new_popul[0].x, new_popul[0].y);
+        new_popul[1].x = popul[l].x;
+        new_popul[1].y = popul[0].y;
+        new_popul[1].f = func(new_popul[1].x, new_popul[1].y);
+        new_popul[2].x = popul[0].x;
+        new_popul[2].y = popul[l+1].y;
+        new_popul[2].f = func(new_popul[2].x, new_popul[2].y);
+        new_popul[3].x = popul[l+1].x;
+        new_popul[3].y = popul[0].y;
+        new_popul[3].f = func(new_popul[2].x, new_popul[2].y);
+        std::sort(new_popul.begin(), new_popul.end(), cmp);
+        popul = new_popul;
+        if (i % 10 == 0) print(popul, i);
     }
     return 0;
 }
